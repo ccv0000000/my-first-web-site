@@ -2,34 +2,11 @@ const http = require("http");
 const fs = require("fs");
 const url = require("url");
 const qs = require("querystring");
-function templateHTML(title, list, body, control) {
-  return `
-  <!DOCTYPE html>
-<html>
-  <head>
-    <title>WEB1 - ${title}</title>
-    <meta charset="utf-8" />
-  </head>
+let template = require("./lib/template.js");
+let path = require("path");
+let sanitizeHtml = require("sanitize-html");
 
-  <body>
-  <h1><a href="/">WEB</a></h1>
-    ${list}
-    ${control}
-    ${body}
-  </body>
-</html>
-  `;
-}
-function templateList(fileList) {
-  let list = "<ul>";
-  for (let i = 0; i < fileList.length; i++) {
-    list += `<li><a href="/?id=${fileList[i]}">${fileList[i]}</a></li>`;
-  }
-  list += "</ul>";
-  return list;
-}
-
-var server = http.createServer(function (request, response) {
+let server = http.createServer(function (request, response) {
   let queryData = request.url;
   let params = new URL("http://localhost:3000" + queryData).searchParams;
   let pathName = new URL("http://localhost:3000" + queryData).pathname;
@@ -39,42 +16,45 @@ var server = http.createServer(function (request, response) {
       let title = "Welcome";
       let description = "Hi!!";
       fs.readdir("./data", function (error, fileList) {
-        let list = templateList(fileList);
-        let template = templateHTML(
+        let list = template.list(fileList);
+        let html = template.HTML(
           title,
           list,
           `<h2>${title}</h2>${description}`,
           `<a href="/create">create</a>`
         );
         response.writeHead(200);
-        response.end(template);
+        response.end(html);
       });
     } else {
       let title = params.get("id");
       fs.readdir("./data", function (error, fileList) {
-        let list = templateList(fileList);
-        fs.readFile(`data/${params.get("id")}`, "utf8", function (error, description) {
-          let template = templateHTML(
+        let list = template.list(fileList);
+        let filteredId = path.parse(params.get("id")).base;
+        fs.readFile(`data/${filteredId}`, "utf8", function (error, description) {
+          let sanitizedTitle = sanitizeHtml(title);
+          let sanitizedDescription = sanitizeHtml(description);
+          let html = template.HTML(
             title,
             list,
-            `<h2>${title}</h2>${description}`,
+            `<h2>${sanitizedTitle}</h2>${sanitizedDescription}`,
             `<a href="/create">create</a>
-             <a href="/update?id=${title}">update</a>
+             <a href="/update?id=${sanitizedTitle}">update</a>
              <form action="http://localhost:3000/delete_process" method="post">
-              <input type="hidden" name="id" value=${title}>
+              <input type="hidden" name="id" value=${sanitizedTitle}>
               <input type="submit" value="delete">
              </form>`
           );
           response.writeHead(200);
-          response.end(template);
+          response.end(html);
         });
       });
     }
   } else if (pathName === "/create") {
     let title = "WEB - create";
     fs.readdir("./data", function (error, fileList) {
-      let list = templateList(fileList);
-      let template = templateHTML(
+      let list = template.list(fileList);
+      let html = template.HTML(
         title,
         list,
         `
@@ -91,15 +71,16 @@ var server = http.createServer(function (request, response) {
         ""
       );
       response.writeHead(200);
-      response.end(template);
+      response.end(html);
     });
   } else if (pathName === "/create_process") {
     let body = "";
     request.on("data", function (data) {
       body += data;
-    });
+    }); // let server = http.createServer(function (request, response) {}에서 request값을 argument로
+    // data라는 parameter에 대입하여 호출
     request.on("end", function () {
-      let post = qs.parse(body);
+      let post = qs.parse(body); // body값을 개체로 변환해서 post에 대입 {title: value, description: value}
       let title = post.title;
       let description = post.description;
       fs.writeFile(`data/${title}`, description, "utf8", function (error) {
@@ -110,9 +91,10 @@ var server = http.createServer(function (request, response) {
   } else if (pathName === "/update") {
     let title = params.get("id");
     fs.readdir("./data", function (error, fileList) {
-      let list = templateList(fileList);
-      fs.readFile(`data/${params.get("id")}`, "utf8", function (error, description) {
-        let template = templateHTML(
+      let list = template.list(fileList);
+      let filteredId = path.parse(params.get("id")).base;
+      fs.readFile(`data/${filteredId}`, "utf8", function (error, description) {
+        let html = template.HTML(
           title,
           list,
           `
@@ -130,7 +112,7 @@ var server = http.createServer(function (request, response) {
           `<a href="/create">create</a> <a href="/update?id=${title}">update</a>`
         );
         response.writeHead(200);
-        response.end(template);
+        response.end(html);
       });
     });
   } else if (pathName === "/update_process") {
@@ -158,7 +140,8 @@ var server = http.createServer(function (request, response) {
     request.on("end", function () {
       let post = qs.parse(body);
       let id = post.id;
-      fs.unlink(`data/${id}`, function (error) {
+      let filteredId = path.parse(id).base;
+      fs.unlink(`data/${filteredId}`, function (error) {
         response.writeHead(302, { Location: `/` });
         response.end();
       });

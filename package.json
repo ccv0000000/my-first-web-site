@@ -1,0 +1,25 @@
+{
+  "name": "web",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ccv0000000/my-first-web-site.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ccv0000000/my-first-web-site/issues"
+  },
+  "homepage": "https://github.com/ccv0000000/my-first-web-site#readme",
+  "dependencies": {
+    "sanitize-html": "^2.7.3"
+  }
+}
